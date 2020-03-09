@@ -15,6 +15,29 @@ public class Controls : MonoBehaviour
         MouseControl();
     }
 
+    private void newMouseControl()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit) && hit.transform.tag == "Node")
+            {
+                Renderer rend;
+                if (node != null)
+                {
+                    rend = node.GetComponent<Renderer>();
+                    rend.material.color = Color.white;
+                }
+
+                node = hit.transform;
+
+                rend = node.GetComponent<Renderer>();
+                rend.material.color = Color.green;
+            }
+        }
+    }
+
     private void MouseControl()
     {
         if (Input.GetMouseButtonDown(0))

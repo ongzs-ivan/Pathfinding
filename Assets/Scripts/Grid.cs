@@ -13,7 +13,7 @@ public class Grid : MonoBehaviour
     void Start()
     {
         this.CreateGrid();
-        this.CreateNeighbours();
+        this.Declare4Neighbours();
     }
 
     private void CreateGrid()
@@ -37,16 +37,26 @@ public class Grid : MonoBehaviour
         }
     }
 
-    private void CreateNeighbours()
+    private void CreateStartNode()
+    {
+
+    }
+
+    private void CreateEndNode()
+    {
+
+    }
+
+    private void Declare4Neighbours()
     {
         for (int i = 0; i < grid.Count; i++)
         {
             Node currentNode = grid[i].GetComponent<Node>();
             int index = i + 1;
 
-            if (index%column == 1)
+            if (index % column == 1) // Nodes without left neighbour
             {
-                if (i + column < column*row)
+                if (i + column < column * row) // check for top node
                 {
                     currentNode.AddNeighbourNode(grid[i + column]);  // North Node
                 }
@@ -57,7 +67,7 @@ public class Grid : MonoBehaviour
                 }
                 currentNode.AddNeighbourNode(grid[i + 1]); // East Node
             }
-            else if (index%column == 0)
+            else if (index % column == 0) // Nodes without right neighbour
             {
                 if (i + column < column * row)
                 {
@@ -70,6 +80,58 @@ public class Grid : MonoBehaviour
                 }
                 currentNode.AddNeighbourNode(grid[i - 1]); // West Node
             }
+            else
+            {
+                if (i + column < column * row)
+                {
+                    currentNode.AddNeighbourNode(grid[i + column]); // North Node
+                }
+
+                if (i - column >= 0)
+                {
+                    currentNode.AddNeighbourNode(grid[i - column]); // South Node
+                }
+                currentNode.AddNeighbourNode(grid[i + 1]); // East Node
+                currentNode.AddNeighbourNode(grid[i - 1]); // West Node
+            }
+        }
+    }
+
+    private void Declare8Neighbours()
+    {
+        for (int i = 0; i < grid.Count; i++)
+        {
+            Node currentNode = grid[i].GetComponent<Node>();
+            int index = i + 1;
+
+            if (index % column == 1) // Nodes without left neighbour
+            {
+                if (i + column < column * row) // check for top node
+                {
+                    currentNode.AddNeighbourNode(grid[i + column]);  // North Node
+                }
+
+                if (i - column >= 0)
+                {
+                    currentNode.AddNeighbourNode(grid[i - column]); // South Node
+                }
+                currentNode.AddNeighbourNode(grid[i + 1]); // East Node
+            }
+
+            else if (index % column == 0) // Nodes without right neighbour
+            {
+                if (i + column < column * row)
+                {
+                    currentNode.AddNeighbourNode(grid[i + column]); // North Node
+                }
+
+                if (i - column >= 0)
+                {
+                    currentNode.AddNeighbourNode(grid[i - column]); // South Node
+                }
+                currentNode.AddNeighbourNode(grid[i - 1]); // West Node
+            }
+
             else
             {
                 if (i + column < column * row)

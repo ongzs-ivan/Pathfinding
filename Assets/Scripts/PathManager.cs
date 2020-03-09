@@ -8,7 +8,6 @@ public class PathManager : MonoBehaviour
     
     public List<Transform> findShortestPath(Transform start, Transform end)
     {
-
         nodes = GameObject.FindGameObjectsWithTag("Node");
 
         List<Transform> result = new List<Transform>();
