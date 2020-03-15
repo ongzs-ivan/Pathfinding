@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,7 +9,229 @@ public class GameManager : MonoBehaviour
     // declares type of pathfinding
     // e.g. dijkstra - diagonal/non-diagonal OR A-Star
 
-    // creates the grid
+    private GameObject[] nodes;
 
-    // adjusts the camera
+    List<Node> result = new List<Node>();
+    List<Node> unexplored = new List<Node>();
+    
+    public Color startColor = new Color(0.0f, 0.7f, 0.0f, 1.0f);
+    public Color goalColor = Color.red;
+    public Color frontierColor = new Color(0.3f, 1.0f, 0.4f, 1.0f);
+    public Color exploredColor = new Color(0.9f, 0.9f, 0.9f, 1.0f);
+    public Color pathColor = Color.yellow;
+    public Color arrowColor = new Color(0.85f, 0.85f, 0.85f, 1.0f);
+    public Color highlightColor = new Color(1.0f, 1.0f, 0.5f, 1.0f);
+
+    [SerializeField] private bool isPathfindComplete = false;
+    private bool exitOnGoal = true;
+    
+    private GridSystem m_grid;
+    private Node currentNode;
+    private Node sourceNode;
+    private Node destinationNode;
+
+    Queue<Node> m_frontierNodes;
+    List<Node> m_exploredNodes;
+    public List<Node> m_pathNodes;
+
+    public bool isDijkstra = true;
+    public bool isAstar = false;
+    public bool canDiagonal = false;
+    public bool canCrossCorners = false;
+    private float heuristicW = 0.0f;
+
+    private void Start()
+    {
+        m_grid = this.GetComponent<GridSystem>();
+    }
+    
+    public void Init(GridSystem grid, Node start, Node end)
+    {
+        if (start == null || end == null)
+        {
+            Debug.Log("No start/end node detected!");
+            return;
+        }
+
+        m_grid = grid;
+        sourceNode = start;
+        destinationNode = end;
+
+        ShowColors(start, end);
+
+        m_frontierNodes = new Queue<Node>();
+        m_frontierNodes.Enqueue(start);
+        m_exploredNodes = new List<Node>();
+        m_pathNodes = new List<Node>();
+
+        for (int x = 0; x < m_grid.GetRowSize(); x++)
+        {
+            for (int y = 0; y < m_grid.GetColumnSize(); y++)
+            {
+                m_grid.grid[x, y].ResetNode();
+                if (canDiagonal)
+                    m_grid.Set8Neighbours();
+                else
+                    m_grid.Set4Neighbours();
+            }
+        }
+
+        isPathfindComplete = false;
+        start.SetCost(0);
+    }
+
+    void ShowColors()
+    {
+        ShowColors(sourceNode, destinationNode);
+    }
+
+    void ShowColors(Node start, Node end)
+    {
+        if (start == null || end == null)
+            return;
+
+        if (m_frontierNodes != null)
+        {
+            m_grid.ColorNodeList(m_frontierNodes.ToList(), frontierColor);
+        }
+
+        if (m_exploredNodes != null)
+        {
+            m_grid.ColorNodeList(m_exploredNodes, exploredColor);
+        }
+
+        if (m_pathNodes != null && m_pathNodes.Count > 0)
+        {
+            m_grid.ColorNodeList(m_pathNodes, pathColor);
+        }
+
+        m_grid.ColorNode(start, startColor);
+        m_grid.ColorNode(end, goalColor);
+    }
+
+    public IEnumerator SearchRoutine(float timestep = 0.0f)
+    {
+        float timeStart = Time.time;
+        yield return null;
+        Debug.Log("Starting search routine");
+        while (!isPathfindComplete)
+        {
+            //Debug.Log(m_frontierNodes.Count);
+            if (m_frontierNodes.Count > 0)
+            {
+                Node currentNode = m_frontierNodes.Dequeue();
+                currentNode.settled = true;
+
+                if (!m_exploredNodes.Contains(currentNode))
+                {
+                    m_exploredNodes.Add(currentNode);
+                }
+
+                if (isDijkstra)
+                {
+                    ExpandDijkstra(currentNode);
+                }
+
+                else if (isAstar)
+                {
+                    // TEMP CODE
+                    break;
+                }
+
+                if (m_frontierNodes.Contains(destinationNode))
+                {
+                    m_pathNodes = GetShortestPath(destinationNode);
+                    if (exitOnGoal)
+                    {
+                        isPathfindComplete = true;
+                    }
+                }
+                
+                ShowDiagnostics();
+                yield return new WaitForSeconds(timestep);
+            }
+            else
+            {
+                isPathfindComplete = true;
+            }
+        }
+        ShowDiagnostics();
+        Debug.Log("Pathfinder Search Routine: Elapsed time = " + (Time.time - timeStart).ToString() + " seconds");
+    }
+
+    private void ShowDiagnostics()
+    {
+        ShowColors();
+        
+        if (m_grid != null)
+        {
+
+        }
+    }
+
+    private List<Node> GetShortestPath(Node endNode)
+    {
+        Node tempNode = new Node();
+        if (endNode == null)
+        {
+            return result;
+        }
+        else
+        {
+            m_exploredNodes.Sort((x, y) => x.GetComponent<Node>().GetCost().CompareTo(y.GetComponent<Node>().GetCost()));
+            tempNode = m_exploredNodes[m_exploredNodes.Count - 1];
+
+            while (tempNode != null)
+            {
+                result.Add(tempNode);
+                Node currentNode = tempNode.GetComponent<Node>();
+                tempNode = currentNode.GetParentNode();
+            }
+
+            result.Reverse();
+            return result;
+        }
+
+    }
+    
+    private void ExpandDijkstra(Node node)
+    {
+        if (node != null)
+        {
+            for (int i = 0; i < node.neighbourNode.Count; i++)
+            {
+                if (!m_exploredNodes.Contains(node.neighbourNode[i]))
+                {
+                    float distanceToNeighbor = Vector3.Distance(node.neighbourNode[i].transform.position, node.transform.position);
+                    float newCost = distanceToNeighbor + node.GetCost();
+
+                    if (float.IsPositiveInfinity(node.neighbourNode[i].GetCost()) || newCost < node.neighbourNode[i].GetCost())
+                    {
+                        node.neighbourNode[i].parentNode = node;
+                        node.neighbourNode[i].SetCost(newCost);
+                    }
+
+                    if (!m_frontierNodes.Contains(node.neighbourNode[i]))
+                    {
+                        m_frontierNodes.Enqueue(node.neighbourNode[i]);
+                    }
+                }
+            }
+        }
+    }
+
+    public bool GetPathList(List<Node> pathList)
+    {
+        if (isPathfindComplete)
+        {
+            pathList = m_pathNodes;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 }
+
+

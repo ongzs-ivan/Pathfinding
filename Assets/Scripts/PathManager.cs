@@ -4,14 +4,25 @@ using UnityEngine;
 
 public class PathManager : MonoBehaviour
 {
+    public GridSystem gridManager;
+
+    List<Node> result = new List<Node>();
+    List<Node> unexplored = new List<Node>();
+
     private GameObject[] nodes;
-    
-    public List<Transform> findShortestPath(Transform start, Transform end)
+
+    private bool isPathfindComplete = false;
+
+    private void Start()
+    {
+        gridManager = GetComponent<GridSystem>();
+    }
+
+    public List<Node> findShortestPath(Node start, Node end)
     {
         nodes = GameObject.FindGameObjectsWithTag("Node");
 
-        List<Transform> result = new List<Transform>();
-        Transform node = DijkstrasAlgo(start, end);
+        Node node = DijkstrasAlgo(start, end);
         
         while (node != null)
         {
@@ -24,10 +35,9 @@ public class PathManager : MonoBehaviour
         return result;
     }
 
-    private Transform DijkstrasAlgo(Transform start, Transform end)
+    private Node DijkstrasAlgo(Node start, Node end)
     {
         double startTime = Time.realtimeSinceStartup;
-        List<Transform> unexplored = new List<Transform>();
         
         foreach (GameObject obj in nodes)
         {
@@ -35,39 +45,18 @@ public class PathManager : MonoBehaviour
             if (n.isWalkable())
             {
                 n.ResetNode();
-                unexplored.Add(obj.transform);
+                unexplored.Add(n);
             }
         }
         
         Node startNode = start.GetComponent<Node>();
         startNode.SetCost(0);
 
-        while (unexplored.Count > 0)
-        {
-            unexplored.Sort((x, y) => x.GetComponent<Node>().GetCost().CompareTo(y.GetComponent<Node>().GetCost()));
-            
-            Transform current = unexplored[0];
-            
-            unexplored.Remove(current);
+        CheckNeighbours();
 
-            Node currentNode = current.GetComponent<Node>();
-            List<Transform> neighbours = currentNode.GetNeighbourNode();
-            foreach (Transform neighNode in neighbours)
-            {
-                Node node = neighNode.GetComponent<Node>();
-                
-                if (unexplored.Contains(neighNode) && node.isWalkable())
-                {
-                    float distance = Vector3.Distance(neighNode.position, current.position);
-                    distance = currentNode.GetCost() + distance;
-                    
-                    if (distance < node.GetCost())
-                    {
-                        node.SetCost(distance);
-                        node.SetParent(current);
-                    }
-                }
-            }
+        while (!isPathfindComplete)
+        {
+
         }
 
         double endTime = (Time.realtimeSinceStartup - startTime);
@@ -76,6 +65,43 @@ public class PathManager : MonoBehaviour
         print("Path completed!");
 
         return end;
+    }
+    
+    private IEnumerator CheckNeighbours()
+    {
+        while (unexplored.Count > 0)
+        {
+            unexplored.Sort((x, y) => x.GetComponent<Node>().GetCost().CompareTo(y.GetComponent<Node>().GetCost()));
+
+            Node current = unexplored[0];
+            current.settled = true;
+            unexplored.Remove(current);
+
+            Node currentNode = current.GetComponent<Node>();
+
+            Renderer rend = currentNode.GetComponent<Renderer>();
+            rend.material.color = Color.grey;
+
+            List<Node> neighbours = currentNode.GetNeighbourNode();
+            foreach (Node neighbourNode in neighbours)
+            {
+                Node node = neighbourNode.GetComponent<Node>();
+
+                if (unexplored.Contains(neighbourNode) && node.isWalkable() && !node.settled)
+                {
+                    float distance = Vector3.Distance(neighbourNode.transform.position, current.transform.position);
+                    distance = currentNode.GetCost() + distance;
+
+                    if (distance < node.GetCost())
+                    {
+                        node.SetCost(distance);
+                        node.SetParent(current);
+                    }
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
+        }
+        isPathfindComplete = true;
     }
 
 }

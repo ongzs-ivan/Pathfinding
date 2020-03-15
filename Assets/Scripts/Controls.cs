@@ -5,10 +5,14 @@ using UnityEngine.SceneManagement;
 
 public class Controls : MonoBehaviour
 {
-    private Transform node;
-    private Transform startNode;
-    private Transform endNode;
-    private List<Transform> blockedPath = new List<Transform>();
+    public GridSystem gridSys;
+
+    private Node node;
+    private bool isComplete = false;
+
+    public Node startNode;
+    public Node endNode;
+    private List<Node> blockedPath = new List<Node>();
     
     private void Update()
     {
@@ -19,6 +23,11 @@ public class Controls : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            // Ray ray = Camera.main.WorldToScreenPoint(Input.mousePosition);
+            // mouse click -> compare mouse coordinates to grid coordinates
+            // get node at the grid coordinates
+            // can remove box colliders then to optimize system
+
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit) && hit.transform.tag == "Node")
@@ -30,7 +39,7 @@ public class Controls : MonoBehaviour
                     rend.material.color = Color.white;
                 }
 
-                node = hit.transform;
+                node = hit.transform.gameObject.GetComponent<Node>();
 
                 rend = node.GetComponent<Renderer>();
                 rend.material.color = Color.green;
@@ -42,7 +51,6 @@ public class Controls : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            //Debug.Log("LMB clicked");
             this.colorBlockPath();
             this.updateNodeColor();
             
@@ -50,17 +58,16 @@ public class Controls : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit) && hit.transform.tag == "Node")
             {
-
-                Debug.Log("Node hit");
+                //Debug.Log("Node hit");
                 Renderer rend;
                 if (node != null)
                 {
                     rend = node.GetComponent<Renderer>();
                     rend.material.color = Color.white;
                 }
-                
-                node = hit.transform;
-                
+
+                node = hit.transform.gameObject.GetComponent<Node>();
+
                 rend = node.GetComponent<Renderer>();
                 rend.material.color = Color.green;
             }
@@ -119,22 +126,47 @@ public class Controls : MonoBehaviour
             }
         }
     }
-    
-    public void FindPath()
+
+    public void FindPathButton()
+    {
+        StartCoroutine(FindPath());
+    }
+
+    public IEnumerator FindPath()
     {
         if (startNode != null && endNode != null)
         {
-            PathManager finder = gameObject.GetComponent<PathManager>();
-            List<Transform> paths = finder.findShortestPath(startNode, endNode);
-            
-            foreach (Transform path in paths)
+            //Debug.Log("Starting pathfind...");
+            //PathManager finder = gameObject.GetComponent<PathManager>();
+            //List<Node> paths = finder.findShortestPath(startNode, endNode);
+
+            List<Node> paths = new List<Node>();
+            GameManager finder = gameObject.GetComponent<GameManager>();
+            finder.Init(gridSys, startNode, endNode);
+            StartCoroutine(finder.SearchRoutine());
+            //Debug.Log("Searching...");
+
+            while(!isComplete)
             {
-                Renderer rend = path.GetComponent<Renderer>();
-                rend.material.color = Color.red;
+                isComplete = finder.GetPathList(paths);
+
+                yield return null;
+
+            }
+
+            if (isComplete)
+            {
+                Debug.Log("Path Complete");
+                foreach (Node path in paths)
+                {
+                    Renderer rend = path.GetComponent<Renderer>();
+                    rend.material.color = Color.red;
+                }
             }
         }
     }
     
+
     public void BlockPath()
     {
         if (node != null)
@@ -159,38 +191,6 @@ public class Controls : MonoBehaviour
 
             node = null;
         }
-
-        //// For selection grid system.
-        //UnitSelectionComponent selection = gameObject.GetComponent<UnitSelectionComponent>();
-        //List<Transform> selected = selection.getSelectedObjects();
-
-        //foreach (Transform nd in selected)
-        //{
-        //    // Render the selected node to black.
-        //    Renderer rend = nd.GetComponent<Renderer>();
-        //    rend.material.color = Color.black;
-
-        //    // Set selected node to not walkable
-        //    Node n = nd.GetComponent<Node>();
-        //    n.setWalkable(false);
-
-        //    // Add the node to the block path list.
-        //    blockPath.Add(nd);
-
-        //    // If the block path is start node, we remove start node.
-        //    if (nd == startNode)
-        //    {
-        //        startNode = null;
-        //    }
-
-        //    // If the block path is end node, we remove end node.
-        //    if (nd == endNode)
-        //    {
-        //        endNode = null;
-        //    }
-        //}
-
-        //selection.clearSelections();
     }
     
     public void RemoveBlock()
@@ -202,36 +202,16 @@ public class Controls : MonoBehaviour
             
             Node n = node.GetComponent<Node>();
             n.ChangeWalkability(true);
-            
+            n.ResetNode();
             blockedPath.Remove(node);
 
             node = null;
         }
-
-        //// For selection grid system.
-        //UnitSelectionComponent selection = gameObject.GetComponent<UnitSelectionComponent>();
-        //List<Transform> selected = selection.getSelectedObjects();
-
-        //foreach (Transform nd in selected)
-        //{
-        //    // Set selected node to white.
-        //    Renderer rend = nd.GetComponent<Renderer>();
-        //    rend.material.color = Color.white;
-
-        //    // Set selected not to walkable.
-        //    Node n = nd.GetComponent<Node>();
-        //    n.ChangeWalkability(true);
-
-        //    // Remove selected node from the block path list.
-        //    blockedPath.Remove(nd);
-        //}
-
-        //selection.clearSelections();
     }
     
     public void ClearBlocks()
     {
-        foreach (Transform path in blockedPath)
+        foreach (Node path in blockedPath)
         {
             Node n = path.GetComponent<Node>();
             n.ChangeWalkability(true);
@@ -252,7 +232,7 @@ public class Controls : MonoBehaviour
     
     private void colorBlockPath()
     {
-        foreach (Transform block in blockedPath)
+        foreach (Node block in blockedPath)
         {
             Renderer rend = block.GetComponent<Renderer>();
             rend.material.color = Color.black;

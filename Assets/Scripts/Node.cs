@@ -5,24 +5,49 @@ using UnityEngine;
 public class Node : MonoBehaviour
 {
     private float cost = int.MaxValue;
-    public Transform parentNode = null;
-    public List<Transform> neighbourNode;
+    public int[] position;
+    public Node parentNode = null;
+    public List<Node> neighbourNode = new List<Node>();
 
-    public bool visited = false;
+    SpriteRenderer sprRend;
+
+    public bool settled = false;
     public bool walkable = true;
+
+    public void CreateNode(int[] pos, Sprite newSpr)
+    {
+        cost = int.MaxValue;
+        settled = false;
+        parentNode = null;
+        position = pos;
+        this.transform.position = new Vector2(position[0], position[1]);
+        this.gameObject.AddComponent<BoxCollider>();
+        this.gameObject.AddComponent<SpriteRenderer>();
+        this.gameObject.tag = "Node";
+        sprRend = this.gameObject.GetComponent<SpriteRenderer>();
+        SetSprite(newSpr);
+    }
 
     void Start()
     {
         this.ResetNode();
     }
 
+    void SetSprite(Sprite newSpr)
+    {
+        sprRend.sprite = newSpr;
+        sprRend.color = Color.white;
+    }
+
     public void ResetNode()
     {
         cost = int.MaxValue;
         parentNode = null;
+        settled = false;
+        walkable = true;
     }
 
-    public void SetParent(Transform node)
+    public void SetParent(Node node)
     {
         this.parentNode = node;
     }
@@ -37,15 +62,21 @@ public class Node : MonoBehaviour
         walkable = newState;
     }
 
-    public void AddNeighbourNode(Transform node)
+    public void AddNeighbourNode(Node node)
     {
         this.neighbourNode.Add(node);
     }
 
-    public List<Transform> GetNeighbourNode()
+    public List<Node> GetNeighbourNode()
     {
-        List<Transform> result = this.neighbourNode;
+        List<Node> result = this.neighbourNode;
         return result;
+    }
+
+    public void ResetNeighbourNodes()
+    {
+        neighbourNode.Clear();
+        neighbourNode = new List<Node>();
     }
 
     public float GetCost()
@@ -53,7 +84,7 @@ public class Node : MonoBehaviour
         return this.cost;
     }
 
-    public Transform GetParentNode()
+    public Node GetParentNode()
     {
         return this.parentNode;
     }
