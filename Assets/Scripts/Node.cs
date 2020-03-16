@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class Node : MonoBehaviour
 {
-    private float cost = int.MaxValue;
+    public float fCost = 0;
+    public float gCost = int.MaxValue;
+    public float hCost = 0;
     public int[] position;
     public Node parentNode = null;
     public List<Node> neighbourNode = new List<Node>();
@@ -16,9 +18,10 @@ public class Node : MonoBehaviour
 
     public void CreateNode(int[] pos, Sprite newSpr)
     {
-        cost = int.MaxValue;
+        UpdateCost();
         settled = false;
         parentNode = null;
+        walkable = true;
         position = pos;
         this.transform.position = new Vector2(position[0], position[1]);
         this.gameObject.AddComponent<BoxCollider>();
@@ -41,7 +44,10 @@ public class Node : MonoBehaviour
 
     public void ResetNode()
     {
-        cost = int.MaxValue;
+        fCost = 0;
+        gCost = int.MaxValue;
+        hCost = 0;
+        UpdateCost();
         parentNode = null;
         settled = false;
         walkable = true;
@@ -52,19 +58,17 @@ public class Node : MonoBehaviour
         this.parentNode = node;
     }
 
-    public void SetCost(float newCost)
+    public void UpdateCost(float H = 0.0f)
     {
-        cost = newCost;
+        fCost = gCost + H * hCost;
     }
-
-    public void ChangeWalkability(bool newState)
-    {
-        walkable = newState;
-    }
-
+    
     public void AddNeighbourNode(Node node)
     {
-        this.neighbourNode.Add(node);
+		if (node.walkable)
+		{
+			this.neighbourNode.Add(node);
+		}
     }
 
     public List<Node> GetNeighbourNode()
@@ -81,16 +85,11 @@ public class Node : MonoBehaviour
 
     public float GetCost()
     {
-        return this.cost;
+        return this.fCost;
     }
 
     public Node GetParentNode()
     {
         return this.parentNode;
-    }
-
-    public bool isWalkable()
-    {
-        return this.walkable;
     }
 }

@@ -57,25 +57,19 @@ public class GridSystem : MonoBehaviour
         }
     }
 
-    public void Set4Neighbours()
+    public void Set4Neighbours(int x, int y)
     {
-        for (int x = 0; x < row; x++)
-        {
-            for (int y = 0; y < column; y++)
-            {
-                if (x - 1 >= 0) // West Node
-                    grid[x, y].AddNeighbourNode(grid[x - 1, y]);
+        if (x - 1 >= 0) // West Node
+            grid[x, y].AddNeighbourNode(grid[x - 1, y]);
 
-                if (x + 1 <= row) // East Node
-                    grid[x, y].AddNeighbourNode(grid[x + 1, y]);
+        if (x + 1 < row) // East Node
+            grid[x, y].AddNeighbourNode(grid[x + 1, y]);
 
-                if (y + 1 <= column) // North Node
-                    grid[x, y].AddNeighbourNode(grid[x, y + 1]);
+        if (y + 1 < column) // North Node
+            grid[x, y].AddNeighbourNode(grid[x, y + 1]);
 
-                if (y - 1 >= 0) // South Node
-                    grid[x, y].AddNeighbourNode(grid[x, y - 1]);
-            }
-        }
+        if (y - 1 >= 0) // South Node
+            grid[x, y].AddNeighbourNode(grid[x, y - 1]);
     }
 
     public void Set8Neighbours()

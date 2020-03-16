@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,128 +8,142 @@ public class Controls : MonoBehaviour
 {
     public GridSystem gridSys;
 
-    private Node node;
+    private GameManager finder;
+    [SerializeField] private Node currentNode = new Node();
+    [SerializeField] private Node previousNode = new Node();
+    private Queue<Node> previousNodes = new Queue<Node>();
+    private bool startNodeSelected = false;
+    private bool endNodeSelected = false;
+    private bool buildWallMode = false;
+    private bool destroyWallMode = false;
     private bool isComplete = false;
+    private Vector3 mousePos;
 
     public Node startNode;
     public Node endNode;
-    private List<Node> blockedPath = new List<Node>();
-    
+    [SerializeField] private List<Node> blockedPath = new List<Node>();
+
+    private void Start()
+    {
+        finder = gameObject.GetComponent<GameManager>();
+        CreateInitialNodes();
+        finder.UpdateGrid(startNode, endNode);
+    }
+
     private void Update()
     {
-        MouseControl();
+        newMouseControl();
+    }
+
+    private void CreateInitialNodes()
+    {
+        startNode = gridSys.grid[5, 10];
+        endNode = gridSys.grid[15, 10];
+        
     }
 
     private void newMouseControl()
     {
         if (Input.GetMouseButtonDown(0))
         {
-            // Ray ray = Camera.main.WorldToScreenPoint(Input.mousePosition);
-            // mouse click -> compare mouse coordinates to grid coordinates
-            // get node at the grid coordinates
-            // can remove box colliders then to optimize system
+            mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            currentNode = gridSys.grid[(int)(mousePos.x + 0.5f), (int)(mousePos.y + 0.5f)];
 
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit) && hit.transform.tag == "Node")
+            if (currentNode != null) // Selects a node
             {
-                Renderer rend;
-                if (node != null)
+                previousNode = currentNode;
+                
+                if (currentNode == startNode) // Start node selected
                 {
-                    rend = node.GetComponent<Renderer>();
-                    rend.material.color = Color.white;
+                    startNodeSelected = true;
                 }
-
-                node = hit.transform.gameObject.GetComponent<Node>();
-
-                rend = node.GetComponent<Renderer>();
-                rend.material.color = Color.green;
+                else if (currentNode == endNode) // End node selected
+                {
+                    endNodeSelected = true;
+                }
+                else if (previousNode.walkable) // Create wall on click + activates wall-building mode
+                {
+                    buildWallMode = true;
+                    CreateWall(previousNode);
+                }
+                else if (!previousNode.walkable) // Delete wall on click + activates wall-destroying mode
+                {
+                    destroyWallMode = true;
+                    DestroyWall(previousNode);
+                }
             }
+        }
+
+        if (Input.GetMouseButton(0))
+        {
+            mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            if (currentNode != null)
+            {
+                previousNode = currentNode;
+            }
+
+            if (previousNode.walkable)
+            {
+                previousNodes.Enqueue(previousNode);
+            }
+
+            currentNode = gridSys.grid[(int)(mousePos.x + 0.5f), (int)(mousePos.y + 0.5f)]; // Update current mouse-on-grid position
+
+            if (startNodeSelected) // Moving start node
+            {
+                if (currentNode != endNode && currentNode.walkable)
+                {
+                    startNode = currentNode;
+                }
+            }
+            else if (endNodeSelected)
+            {
+                if (currentNode != startNode && currentNode.walkable)
+                {
+                    endNode = currentNode;
+                }
+            }
+            else if (buildWallMode && previousNode.walkable)
+            {
+                CreateWall(previousNode);
+            }
+            else if (destroyWallMode && !previousNode.walkable)
+            {
+                DestroyWall(previousNode);
+            }
+
+            if (previousNodes.Count != 0) // starts cleaning up mouse trail
+                StartCoroutine(ClearPreviousNodes());
+
+            finder.UpdateGrid(startNode, endNode);
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            currentNode = null;
+            startNodeSelected = false;
+            endNodeSelected = false;
+            buildWallMode = false;
+            destroyWallMode = false;
         }
     }
 
-    private void MouseControl()
+    private IEnumerator ClearPreviousNodes()
     {
-        if (Input.GetMouseButtonDown(0))
+        Node tempNode = new Node();
+
+        while (previousNodes.Count > 0)
         {
-            this.colorBlockPath();
-            this.updateNodeColor();
-            
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit) && hit.transform.tag == "Node")
-            {
-                //Debug.Log("Node hit");
-                Renderer rend;
-                if (node != null)
-                {
-                    rend = node.GetComponent<Renderer>();
-                    rend.material.color = Color.white;
-                }
-
-                node = hit.transform.gameObject.GetComponent<Node>();
-
-                rend = node.GetComponent<Renderer>();
-                rend.material.color = Color.green;
-            }
-        }
-    }
-    
-    public void StartNode()
-    {
-        if (node != null)
-        {
-            Node n = node.GetComponent<Node>();
-            if (n.isWalkable())
-            {
-                if (startNode == null)
-                {
-                    Renderer rend = node.GetComponent<Renderer>();
-                    rend.material.color = Color.blue;
-                }
-                else
-                {
-                    Renderer rend = startNode.GetComponent<Renderer>();
-                    rend.material.color = Color.white;
-                    
-                    rend = node.GetComponent<Renderer>();
-                    rend.material.color = Color.blue;
-                }
-
-                startNode = node;
-                node = null;
-            }
-        }
-    }
-    
-    public void EndNode()
-    {
-        if (node != null)
-        {
-            Node n = node.GetComponent<Node>();
-            if (n.isWalkable())
-            {
-                if (endNode == null)
-                {
-                    Renderer rend = node.GetComponent<Renderer>();
-                    rend.material.color = Color.cyan;
-                }
-                else
-                {
-                    Renderer rend = endNode.GetComponent<Renderer>();
-                    rend.material.color = Color.white;
-                    rend = node.GetComponent<Renderer>();
-                    rend.material.color = Color.cyan;
-                }
-
-                endNode = node;
-                node = null;
-            }
+            tempNode = previousNodes.Dequeue();
+            if (tempNode != startNode && tempNode != endNode && tempNode.walkable)
+                gridSys.ColorNode(tempNode, Color.white);
+            yield return new WaitForSeconds(0.0f);
         }
     }
 
     public void FindPathButton()
     {
+        ClearSearch();
         StartCoroutine(FindPath());
     }
 
@@ -136,15 +151,9 @@ public class Controls : MonoBehaviour
     {
         if (startNode != null && endNode != null)
         {
-            //Debug.Log("Starting pathfind...");
-            //PathManager finder = gameObject.GetComponent<PathManager>();
-            //List<Node> paths = finder.findShortestPath(startNode, endNode);
-
             List<Node> paths = new List<Node>();
-            GameManager finder = gameObject.GetComponent<GameManager>();
-            finder.Init(gridSys, startNode, endNode);
+            finder.Init(startNode, endNode);
             StartCoroutine(finder.SearchRoutine());
-            //Debug.Log("Searching...");
 
             while(!isComplete)
             {
@@ -153,76 +162,65 @@ public class Controls : MonoBehaviour
                 yield return null;
 
             }
-
-            if (isComplete)
-            {
-                Debug.Log("Path Complete");
-                foreach (Node path in paths)
-                {
-                    Renderer rend = path.GetComponent<Renderer>();
-                    rend.material.color = Color.red;
-                }
-            }
         }
     }
     
-
-    public void BlockPath()
+    public void CreateWall(Node node)
     {
-        if (node != null)
-        {
-            Renderer rend = node.GetComponent<Renderer>();
-            rend.material.color = Color.black;
-            
-            Node n = node.GetComponent<Node>();
-            n.ChangeWalkability(false);
-            
-            blockedPath.Add(node);
-            
-            if (node == startNode)
-            {
-                startNode = null;
-            }
-            
-            if (node == endNode)
-            {
-                endNode = null;
-            }
-
-            node = null;
-        }
+        node.walkable = false;
+        blockedPath.Add(node);
+        gridSys.ColorNode(node, Color.black);
     }
-    
-    public void RemoveBlock()
+
+    public void DestroyWall(Node node)
     {
-        if (node != null)
-        {
-            Renderer rend = node.GetComponent<Renderer>();
-            rend.material.color = Color.white;
-            
-            Node n = node.GetComponent<Node>();
-            n.ChangeWalkability(true);
-            n.ResetNode();
-            blockedPath.Remove(node);
-
-            node = null;
-        }
+        node.walkable = true;
+        gridSys.ColorNode(node, Color.white);
+        blockedPath.Remove(node);
     }
-    
+
     public void ClearBlocks()
     {
-        foreach (Node path in blockedPath)
-        {
-            Node n = path.GetComponent<Node>();
-            n.ChangeWalkability(true);
-            
-            Renderer rend = path.GetComponent<Renderer>();
-            rend.material.color = Color.white;
+        //foreach (Node wall in blockedPath)
+        //{
+        //    gridSys.ColorNode(wall, Color.white);
+        //    wall.walkable = true;
+        //    blockedPath.Dequeue();
+        //}
+        StartCoroutine(DestroyAllWalls());
+        
+    }
 
+    public IEnumerator DestroyAllWalls()
+    {
+
+        Node tempNode = new Node();
+
+        while (blockedPath.Count > 0)
+        {
+            tempNode = blockedPath[0];
+            gridSys.ColorNode(tempNode, Color.white);
+            tempNode.walkable = true;
+            blockedPath.Remove(tempNode);
+
+            yield return new WaitForSeconds(0.0f);
         }
-        blockedPath.Clear();
+        yield return null;
     }
     
+    public void CleanFromSearch()
+    {
+        finder.RestartSearch();
+        for (int x = 0; x < gridSys.GetRowSize(); x++)
+        {
+            for (int y = 0; y < gridSys.GetColumnSize(); y++)
+            {
+                if (gridSys.grid[x, y] != startNode && gridSys.grid[x, y] != endNode && gridSys.grid[x, y].walkable)
+                    gridSys.ColorNode(gridSys.grid[x, y], Color.white);
+            }
+        }
+    }
+
     public void Restart()
     {
         Debug.Log("Reloading Scene");
@@ -230,27 +228,19 @@ public class Controls : MonoBehaviour
         SceneManager.LoadScene(loadedLevel.buildIndex);
     }
     
-    private void colorBlockPath()
+    private void ClearSearch()
     {
-        foreach (Node block in blockedPath)
+        for (int x = 0; x < gridSys.GetRowSize(); x++)
         {
-            Renderer rend = block.GetComponent<Renderer>();
-            rend.material.color = Color.black;
+            for (int y = 0; y < gridSys.GetColumnSize(); y++)
+            {
+                if (gridSys.grid[x,y] != startNode && gridSys.grid[x,y] != endNode && gridSys.grid[x,y].walkable)
+                {
+                    gridSys.ColorNode(gridSys.grid[x, y], Color.white);
+                    gridSys.grid[x, y].ResetNode();
+                }
+            }
         }
     }
     
-    private void updateNodeColor()
-    {
-        if (startNode != null)
-        {
-            Renderer rend = startNode.GetComponent<Renderer>();
-            rend.material.color = Color.blue;
-        }
-
-        if (endNode != null)
-        {
-            Renderer rend = endNode.GetComponent<Renderer>();
-            rend.material.color = Color.cyan;
-        }
-    }
 }
