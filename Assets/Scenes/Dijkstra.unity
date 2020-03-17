@@ -1332,11 +1332,11 @@ MonoBehaviour:
   arrowColor: {r: 0.85, g: 0.85, b: 0.85, a: 1}
   highlightColor: {r: 1, g: 1, b: 0.5, a: 1}
   m_pathNodes: []
-  isDijkstra: 0
-  isAstar: 1
+  isDijkstra: 1
+  isAstar: 0
   canDiagonal: 1
   canCrossCorners: 0
-  heuristicW: 10
+  heuristicW: 1
 --- !u!4 &1368367144
 Transform:
   m_ObjectHideFlags: 0

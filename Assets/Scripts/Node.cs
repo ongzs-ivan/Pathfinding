@@ -1,13 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
-public class Node : MonoBehaviour
+public class Node : MonoBehaviour , IComparable<Node>
 {
-    public float fCost = 0;
-    public float gCost = int.MaxValue;
-    public float hCost = 0;
+    public float cost = int.MaxValue;
     public int[] position;
+    public float priority;
     public Node parentNode = null;
     public List<Node> neighbourNode = new List<Node>();
 
@@ -18,7 +18,6 @@ public class Node : MonoBehaviour
 
     public void CreateNode(int[] pos, Sprite newSpr)
     {
-        UpdateCost();
         settled = false;
         parentNode = null;
         walkable = true;
@@ -44,10 +43,7 @@ public class Node : MonoBehaviour
 
     public void ResetNode()
     {
-        fCost = 0;
-        gCost = int.MaxValue;
-        hCost = 0;
-        UpdateCost();
+        cost = int.MaxValue;
         parentNode = null;
         settled = false;
         walkable = true;
@@ -56,11 +52,6 @@ public class Node : MonoBehaviour
     public void SetParent(Node node)
     {
         this.parentNode = node;
-    }
-
-    public void UpdateCost(float H = 0.0f)
-    {
-        fCost = gCost + H * hCost;
     }
     
     public void AddNeighbourNode(Node node)
@@ -85,11 +76,29 @@ public class Node : MonoBehaviour
 
     public float GetCost()
     {
-        return this.fCost;
+        return this.cost;
     }
 
     public Node GetParentNode()
     {
         return this.parentNode;
+    }
+
+    public int CompareTo(Node other)
+    {
+        if (this.priority < other.priority)
+        {
+            return -1;
+
+        }
+        else if (this.priority > other.priority)
+        {
+            return 1;
+
+        }
+        else
+        {
+            return 0;
+        }
     }
 }

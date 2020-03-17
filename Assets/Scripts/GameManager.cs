@@ -28,7 +28,7 @@ public class GameManager : MonoBehaviour
     private Node sourceNode;
     private Node destinationNode;
 
-    Queue<Node> m_frontierNodes; // open list
+    PriorityQueue<Node> m_frontierNodes; // open list
     List<Node> m_exploredNodes; // settled list
     [SerializeField] List<Node> m_pathNodes; // path list
 
@@ -50,7 +50,7 @@ public class GameManager : MonoBehaviour
 
         ShowColors(start, end);
 
-        m_frontierNodes = new Queue<Node>();
+        m_frontierNodes = new PriorityQueue<Node>();
         m_frontierNodes.Enqueue(start);
         m_exploredNodes = new List<Node>();
         m_pathNodes = new List<Node>();
@@ -67,9 +67,7 @@ public class GameManager : MonoBehaviour
         }
 
         isPathfindComplete = false;
-        start.fCost = 0;
-        start.gCost = 0;
-        start.hCost = 0;
+        start.cost = 0;
     }
 
     public void UpdateGrid(Node start, Node end)
@@ -121,7 +119,7 @@ public class GameManager : MonoBehaviour
             {
                 Node currentNode = m_frontierNodes.Dequeue();
 
-                if (currentNode.walkable)
+                if (currentNode.walkable )
                 {
                     if (!m_exploredNodes.Contains(currentNode))
                     {
@@ -160,9 +158,14 @@ public class GameManager : MonoBehaviour
 
     public void RestartSearch()
     {
+        m_grid.CleanupGrid();
+        m_grid.ResetNeighbours();
         m_frontierNodes.Clear();
+        m_frontierNodes = new PriorityQueue<Node>();
         m_exploredNodes.Clear();
+        m_exploredNodes = new List<Node>();
         m_pathNodes.Clear();
+        m_pathNodes = new List<Node>();
         ShowColors();
     }
 
@@ -208,70 +211,59 @@ public class GameManager : MonoBehaviour
             {
                 if (!m_exploredNodes.Contains(node.neighbourNode[i]))
                 {
-                    if (node.neighbourNode[i] != null && node.neighbourNode[i].walkable)
+                    if (!node.neighbourNode[i].walkable)
+                        continue;
+                    float distanceToNeighbor = m_grid.GetNodeDistance(node, node.neighbourNode[i]);
+                    float newDistanceTraveled = distanceToNeighbor + node.cost;
+
+                    if (float.IsPositiveInfinity(node.neighbourNode[i].cost) ||
+                        newDistanceTraveled < node.neighbourNode[i].cost)
                     {
-                        float distanceToNeighbor = Vector3.Distance(node.neighbourNode[i].transform.position, node.transform.position);
-                        float newCost = distanceToNeighbor + node.gCost;
+                        node.neighbourNode[i].parentNode = node;
+                        node.neighbourNode[i].cost = newDistanceTraveled;
+                    }
 
-                        if (float.IsPositiveInfinity(node.neighbourNode[i].gCost) || newCost < node.neighbourNode[i].gCost)
-                        {
-                            node.neighbourNode[i].SetParent(node);
-                            node.neighbourNode[i].gCost = newCost;
-                        }
-
-                        if (!m_frontierNodes.Contains(node.neighbourNode[i]))
-                        {
-                            m_frontierNodes.Enqueue(node.neighbourNode[i]);
-                        }
+                    if (!m_frontierNodes.Contains(node.neighbourNode[i]))
+                    {
+                        node.neighbourNode[i].priority = (int)node.neighbourNode[i].cost;
+                        m_frontierNodes.Enqueue(node.neighbourNode[i]);
                     }
                 }
             }
+            node.settled = true;
         }
-        node.settled = true;
     }
 
     private void ExpandAstar(Node node)
     {
-        if (node.settled || !node.walkable)
+        if (node != null)
         {
-            return;
-        }
-
-        foreach (Node neighbour in node.neighbourNode)
-        {
-            float Dx = neighbour.transform.position.x - node.transform.position.x;
-            float Dy = neighbour.transform.position.y - node.transform.position.y;
-
-            float tempG = Vector3.Distance(neighbour.transform.position, node.transform.position);
-            float tempH = Mathf.Abs(Dx) + Mathf.Abs(Dy);
-            float tempF = neighbour.gCost + heuristicW * neighbour.hCost;
-            if (!m_frontierNodes.Contains(neighbour))
+            for (int i = 0; i < node.neighbourNode.Count; i++)
             {
-                m_frontierNodes.Enqueue(neighbour);
-                neighbour.SetParent(node);
-                neighbour.gCost = tempG;
-                neighbour.hCost = tempH;
-                neighbour.UpdateCost(heuristicW);
-
-                //float Dx = neighbour.transform.position.x - node.transform.position.x;
-                //float Dy = neighbour.transform.position.y - node.transform.position.y;
-
-                //neighbour.gCost = Vector3.Distance(neighbour.transform.position, node.transform.position);
-                //neighbour.hCost = Mathf.Abs(Dx) + Mathf.Abs(Dy);
-                //neighbour.fCost = neighbour.gCost + heuristicW * neighbour.hCost;
-            }
-            else if (m_frontierNodes.Contains(neighbour))
-            {
-                if (tempG < neighbour.gCost)
+                if (!m_exploredNodes.Contains(node.neighbourNode[i]))
                 {
-                    neighbour.SetParent(node);
-                    neighbour.gCost = tempG;
-                    neighbour.hCost = tempH;
-                    neighbour.UpdateCost(heuristicW);
+                    if (!node.neighbourNode[i].walkable)
+                        continue;
+                    float distanceToNeighbor = m_grid.GetNodeDistance(node, node.neighbourNode[i]);
+                    float newDistanceTraveled = distanceToNeighbor + node.cost;
+
+                    if (float.IsPositiveInfinity(node.neighbourNode[i].cost) ||
+                        newDistanceTraveled < node.neighbourNode[i].cost)
+                    {
+                        node.neighbourNode[i].parentNode = node;
+                        node.neighbourNode[i].cost = newDistanceTraveled;
+                    }
+
+                    if (!m_frontierNodes.Contains(node.neighbourNode[i]) && m_grid != null)
+                    {
+                        int distanceToGoal = (int)m_grid.GetNodeDistance(node.neighbourNode[i], destinationNode);
+                        node.neighbourNode[i].priority = (int)node.neighbourNode[i].cost + distanceToGoal;
+                        m_frontierNodes.Enqueue(node.neighbourNode[i]);
+                    }
                 }
             }
+            node.settled = true;
         }
-        node.settled = true;
     }
 
     public bool GetPathList(List<Node> pathList)

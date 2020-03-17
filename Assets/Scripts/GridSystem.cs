@@ -57,6 +57,18 @@ public class GridSystem : MonoBehaviour
         }
     }
 
+    public void CleanupGrid()
+    {
+        for (int x = 0; x < row; x++)
+        {
+            for (int y = 0; y < column; y++)
+            {
+                if (grid[x, y].walkable)
+                    grid[x, y].ResetNode();
+            }
+        }
+    }
+
     public void Set4Neighbours(int x, int y)
     {
         if (x - 1 >= 0) // West Node
@@ -103,6 +115,20 @@ public class GridSystem : MonoBehaviour
                 }
             }
         }
+    }
+
+    public float GetNodeDistance(Node source, Node target)
+    {
+        int dx = Mathf.Abs((int)(source.transform.position.x - target.transform.position.x));
+        int dy = Mathf.Abs((int)(source.transform.position.y - target.transform.position.y));
+
+        int min = Mathf.Min(dx, dy);
+        int max = Mathf.Max(dx, dy);
+
+        int diagonalSteps = min;
+        int straigtSteps = max - min;
+
+        return (1.4f * diagonalSteps + straigtSteps);
     }
 
     public void ColorNodeList(List<Node> nodeList, Color newColor)
