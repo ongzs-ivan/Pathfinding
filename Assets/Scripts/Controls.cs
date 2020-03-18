@@ -1,12 +1,17 @@
-﻿using System.Linq;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class Controls : MonoBehaviour
 {
     public GridSystem gridSys;
+
+    public Dropdown algoType;
+    public Toggle diagonal;
+    public Toggle crossCorners;
+    public InputField weight;
 
     private GameManager finder;
     [SerializeField] private Node currentNode = new Node();
@@ -28,18 +33,30 @@ public class Controls : MonoBehaviour
         finder = gameObject.GetComponent<GameManager>();
         CreateInitialNodes();
         finder.UpdateGrid(startNode, endNode);
+
+        algoType.value = (int)finder.algorithm;
+        diagonal.isOn = finder.canDiagonal;
+        crossCorners.isOn = finder.canCrossCorners;
+        weight.text = finder.heuristicW.ToString();
+        weight.characterValidation = InputField.CharacterValidation.Decimal;
     }
 
     private void Update()
     {
         newMouseControl();
+
+        algoType.interactable = !finder.isRunning;
+        diagonal.interactable = !finder.isRunning;
+        crossCorners.interactable = !finder.isRunning;
+        weight.interactable = !finder.isRunning;
     }
 
     private void CreateInitialNodes()
     {
-        startNode = gridSys.grid[5, 10];
-        endNode = gridSys.grid[15, 10];
-        
+        int tempX = gridSys.GetRowSize() / 2;
+        int tempY = gridSys.GetColumnSize() / 2;
+        startNode = gridSys.grid[tempX - 5, tempY];
+        endNode = gridSys.grid[tempX + 5, tempY];
     }
 
     private void newMouseControl()
@@ -128,6 +145,39 @@ public class Controls : MonoBehaviour
         }
     }
 
+    public void OnAlgorithmTypeChange()
+    {
+        if (!finder.isRunning)
+        {
+            finder.algorithm = (algoType)algoType.value;
+        }
+    }
+
+    public void OnDiagonalToggle()
+    {
+        if (!finder.isRunning)
+        {
+            finder.canDiagonal = diagonal.isOn;
+        }
+
+    }
+
+    public void OnCrossCornersToggle()
+    {
+        if (!finder.isRunning)
+        {
+            finder.canCrossCorners = crossCorners.isOn;
+        }
+    }
+
+    public void OnWeightInput()
+    {
+        if (!finder.isRunning)
+        {
+            finder.heuristicW = float.Parse(weight.text);
+        }
+    }
+
     private IEnumerator ClearPreviousNodes()
     {
         Node tempNode = new Node();
@@ -181,12 +231,7 @@ public class Controls : MonoBehaviour
 
     public void ClearBlocks()
     {
-        //foreach (Node wall in blockedPath)
-        //{
-        //    gridSys.ColorNode(wall, Color.white);
-        //    wall.walkable = true;
-        //    blockedPath.Dequeue();
-        //}
+        
         StartCoroutine(DestroyAllWalls());
         
     }

@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Dijkstra.unity
+    guid: 4c1e5decee68d2f44878e94e22705b3f
   m_configObjects: {}

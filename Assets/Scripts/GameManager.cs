@@ -3,6 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum algoType
+{
+    Dijkstra,
+    AStar
+}
+
 public class GameManager : MonoBehaviour
 {
     // For reference:
@@ -13,16 +19,19 @@ public class GameManager : MonoBehaviour
     List<Node> result = new List<Node>();
     List<Node> unexplored = new List<Node>();
     
-    public Color startColor = new Color(0.0f, 0.7f, 0.0f, 1.0f);
-    public Color goalColor = Color.red;
-    public Color frontierColor = new Color(0.3f, 1.0f, 0.4f, 1.0f);
-    public Color exploredColor = new Color(0.9f, 0.9f, 0.9f, 1.0f);
-    public Color pathColor = Color.yellow;
-    public Color arrowColor = new Color(0.85f, 0.85f, 0.85f, 1.0f);
-    public Color highlightColor = new Color(1.0f, 1.0f, 0.5f, 1.0f);
+    private Color startColor = new Color(0.0f, 0.7f, 0.0f, 1.0f);
+    private Color goalColor = Color.red;
+    private Color frontierColor = new Color(0.3f, 1.0f, 0.4f, 1.0f);
+    private Color exploredColor = new Color(0.9f, 0.9f, 0.9f, 1.0f);
+    private Color pathColor = Color.yellow;
+    private Color arrowColor = new Color(0.85f, 0.85f, 0.85f, 1.0f);
+    private Color highlightColor = new Color(1.0f, 1.0f, 0.5f, 1.0f);
 
-    private bool isPathfindComplete = false;
+    public bool isRunning = false;
+    public bool isPathfindComplete = false;
     
+    public algoType algorithm = algoType.Dijkstra;
+
     private GridSystem m_grid;
     private Node currentNode;
     private Node sourceNode;
@@ -31,9 +40,7 @@ public class GameManager : MonoBehaviour
     PriorityQueue<Node> m_frontierNodes; // open list
     List<Node> m_exploredNodes; // settled list
     [SerializeField] List<Node> m_pathNodes; // path list
-
-    public bool isDijkstra = false;
-    public bool isAstar = true;
+    
     public bool canDiagonal = false;
     public bool canCrossCorners = false;
     public float heuristicW = 1.0f;
@@ -59,13 +66,27 @@ public class GameManager : MonoBehaviour
         {
             for (int y = 0; y < m_grid.GetColumnSize(); y++)
             {
+                if (!m_grid.grid[x, y].walkable)
+                    continue;
+
                 if (canDiagonal)
-                    m_grid.Set8Neighbours();
-                else
-                    m_grid.Set4Neighbours(x, y);
+                {
+                    if (canCrossCorners)
+                    {
+                        m_grid.CrossCornerNeighbours(x, y);
+                    }
+                    else
+                    {
+                        m_grid.SetAllNeighbours(x, y);
+                    }
+                }
+                else if (!canDiagonal)
+                {
+                    m_grid.SetSomeNeighbours(x, y);
+                }
             }
         }
-
+        isRunning = true;
         isPathfindComplete = false;
         start.cost = 0;
     }
@@ -126,11 +147,11 @@ public class GameManager : MonoBehaviour
                         m_exploredNodes.Add(currentNode);
                     }
 
-                    if (isDijkstra)
+                    if (algorithm == algoType.Dijkstra)
                     {
                         ExpandDijkstra(currentNode);
                     }
-                    else if (isAstar)
+                    else if (algorithm == algoType.AStar)
                     {
                         ExpandAstar(currentNode);
                     }
@@ -140,6 +161,7 @@ public class GameManager : MonoBehaviour
                     {
                         m_pathNodes = GetShortestPath(destinationNode);
                         isPathfindComplete = true;
+                        isRunning = false;
                     }
 
                 }
@@ -150,6 +172,7 @@ public class GameManager : MonoBehaviour
             else
             {
                 isPathfindComplete = true;
+                isRunning = false;
             }
         }
         ShowDiagnostics();
@@ -245,7 +268,7 @@ public class GameManager : MonoBehaviour
                     if (!node.neighbourNode[i].walkable)
                         continue;
                     float distanceToNeighbor = m_grid.GetNodeDistance(node, node.neighbourNode[i]);
-                    float newDistanceTraveled = distanceToNeighbor + node.cost;
+                    float newDistanceTraveled = (1 / heuristicW) * distanceToNeighbor + node.cost;
 
                     if (float.IsPositiveInfinity(node.neighbourNode[i].cost) ||
                         newDistanceTraveled < node.neighbourNode[i].cost)

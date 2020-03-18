@@ -10,8 +10,8 @@ public class GridSystem : MonoBehaviour
     [Space]
     public Sprite tile;
 
-    private const int minRow = 20;
-    private const int minColumn = 20;
+    private const int minRow = 40;
+    private const int minColumn = 40;
     private const int maxRow = 108;
     private const int maxColumn = 108;
 
@@ -69,7 +69,7 @@ public class GridSystem : MonoBehaviour
         }
     }
 
-    public void Set4Neighbours(int x, int y)
+    public void SetSomeNeighbours(int x, int y)
     {
         if (x - 1 >= 0) // West Node
             grid[x, y].AddNeighbourNode(grid[x - 1, y]);
@@ -84,37 +84,58 @@ public class GridSystem : MonoBehaviour
             grid[x, y].AddNeighbourNode(grid[x, y - 1]);
     }
 
-    public void Set8Neighbours()
+    public void SetAllNeighbours(int x, int y)
     {
-        int tempRow = 0;
-        int tempCol = 0;
-        for (int x = 0; x < row; x++)
-        {
-            for (int y = 0; y < column; y++)
-            {
-                for (int i = -1; i < 2; i++)
-                {
-                    for (int j = -1; j < 2; j++)
-                    {
-                        if (x + i >= 0)
-                            tempRow = (x + i + row) % row;
-                        else
-                            tempRow = 0;
+        if (x - 1 >= 0) // West 
+            grid[x, y].AddNeighbourNode(grid[x - 1, y]);
 
-                        if (y + j >= 0)
-                            tempCol = (y + j + column) % column;
-                        else
-                            tempCol = 0;
+        if (x + 1 < row) // East 
+            grid[x, y].AddNeighbourNode(grid[x + 1, y]);
 
-                        if (grid [x,y] != grid [tempRow, tempCol] && !grid[x,y].neighbourNode.Contains(grid[tempRow,tempCol]))
-                        {
-                            grid[x, y].AddNeighbourNode(grid[tempRow, tempCol]);
-                        }
-                        //Debug.Log("Added node at " + tempRow + tempCol);
-                    }
-                }
-            }
-        }
+        if (y + 1 < column) // North 
+            grid[x, y].AddNeighbourNode(grid[x, y + 1]);
+
+        if (y - 1 >= 0) // South 
+            grid[x, y].AddNeighbourNode(grid[x, y - 1]);
+
+        if (x + 1 < row && y + 1 < column && grid[x, y+1].walkable && grid[x + 1, y].walkable) // North East
+            grid[x, y].AddNeighbourNode(grid[x + 1, y + 1]);
+
+        if (x + 1 < row && y - 1 >= 0 && grid[x, y - 1].walkable && grid[x + 1, y].walkable) // South East
+            grid[x, y].AddNeighbourNode(grid[x + 1, y - 1]);
+
+        if (x - 1 >= 0 && y + 1 < column && grid[x, y + 1].walkable && grid[x -1, y].walkable) // North West
+            grid[x, y].AddNeighbourNode(grid[x - 1, y + 1]);
+
+        if (x - 1 >= 0 && y - 1 >= 0 && grid[x, y - 1].walkable && grid[x -1, y].walkable) // South West
+            grid[x, y].AddNeighbourNode(grid[x - 1, y - 1]);
+    }
+
+    public void CrossCornerNeighbours(int x, int y)
+    {
+        if (x - 1 >= 0) // West 
+            grid[x, y].AddNeighbourNode(grid[x - 1, y]);
+
+        if (x + 1 < row) // East 
+            grid[x, y].AddNeighbourNode(grid[x + 1, y]);
+
+        if (y + 1 < column) // North 
+            grid[x, y].AddNeighbourNode(grid[x, y + 1]);
+
+        if (y - 1 >= 0) // South 
+            grid[x, y].AddNeighbourNode(grid[x, y - 1]);
+
+        if (x + 1 < row && y + 1 < column && (grid[x, y + 1].walkable || grid[x + 1, y].walkable)) // North East
+            grid[x, y].AddNeighbourNode(grid[x + 1, y + 1]);
+
+        if (x + 1 < row && y - 1 >= 0 && (grid[x, y - 1].walkable || grid[x + 1, y].walkable)) // South East
+            grid[x, y].AddNeighbourNode(grid[x + 1, y - 1]);
+
+        if (x - 1 >= 0 && y + 1 < column && (grid[x, y + 1].walkable || grid[x - 1, y].walkable)) // North West
+            grid[x, y].AddNeighbourNode(grid[x - 1, y + 1]);
+
+        if (x - 1 >= 0 && y - 1 >= 0 && (grid[x, y - 1].walkable || grid[x - 1, y].walkable)) // South West
+            grid[x, y].AddNeighbourNode(grid[x - 1, y - 1]);
     }
 
     public float GetNodeDistance(Node source, Node target)
